@@ -58,7 +58,7 @@ int main(void)
                 checksum += + nd[i];
             }
         }
-        printf("checksum: %i\n", checksum);
+        //printf("checksum: %i\n", checksum);
 
         // the last digit in that sum must be  0
         if ( checksum % 10 == 0 )
