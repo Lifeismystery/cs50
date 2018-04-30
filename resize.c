@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
 
     float f = atof(argv[1]);
 
-    if (f < 0 && f > 100)
+    if (f <= 0 || f > 100)
     {
         fprintf(stderr, "Usage: ./resize f infile outfile\n");
         fprintf(stderr, "f < 0 and n > 100\n");
@@ -66,31 +66,22 @@ int main(int argc, char *argv[])
     out_bf.bfOffBits = 54;
 
     BITMAPINFOHEADER out_bi = bi;
-    
+
     if (f >= 1.0)
     {
-        n = (int)(f);
         out_bi.biWidth = bi.biWidth * (int)(f);
         out_bi.biHeight = bi.biHeight * (int)(f);
     }
     else
     {
-        out_bi.biWidth = (int)(bi.biWidth * f);
-        out_bi.biHeight = (int)(bi.biHeight * f);
-        printf("bi.biWidth: %i\n", bi.biWidth);
-        printf("bi.biHeight: %i\n", bi.biHeight);
-        printf("out_bi.biWidth: %i\n", out_bi.biWidth);
-        printf("out_bi.biHeight: %i\n", out_bi.biHeight);
-        //out_bi.biWidth = (int)(bi.biWidth * f);
-        //out_bi.biHeight = (int)(bi.biHeight * f);
-
-
+        out_bi.biWidth = round(bi.biWidth * f);
+        out_bi.biHeight = round(bi.biHeight * f);
     }
+
 
     // determine padding for scanlines
     int padding = (4 - (bi.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
     int out_padding = (4 - (out_bi.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
-    printf("out_padding: %i\n", out_padding);
 
     out_bi.biSizeImage = ((out_bi.biWidth * sizeof(RGBTRIPLE)) + out_padding) * abs(out_bi.biHeight);
 
@@ -101,14 +92,19 @@ int main(int argc, char *argv[])
 
     // write outfile's BITMAPINFOHEADE
     fwrite(&out_bi, sizeof(BITMAPINFOHEADER), 1, outptr);
-    float row = 1;
-    float col = 1;
+    //int row = 1;
+    //int col = 1;
+    int row = 0;
+    int col = 0;
     // iterate over infile's scanlines
+    // Adding new size before the while loop, subtracting old size in the loop.
     for (int i = 0; i < abs(bi.biHeight); i++)
     {
-        row += f;
-        //each pixel in row
-        while (row > 1)
+        row += abs(out_bi.biHeight);
+
+        //printf("i: %i\n", i);
+        //printf("row: %i\n", row);
+        while (row > 0)
         {
             for (int j = 0; j < bi.biWidth; j++)
             {
@@ -117,12 +113,14 @@ int main(int argc, char *argv[])
 
                 // read RGB triple from infile
                 fread(&triple, sizeof(RGBTRIPLE), 1, inptr);
-                col += f;
-                while (col > 1)
+                col += out_bi.biWidth;
+                //printf("col: %i\n", col);
+                while (col > 0)
                 {
                     // write RGB triple to outfile
                     fwrite(&triple, sizeof(RGBTRIPLE), 1, outptr);
-                    col--;
+                    //col--;
+                    col-=bi.biWidth;
                 }
             }
             // write padding to outfile
@@ -130,7 +128,7 @@ int main(int argc, char *argv[])
             {
                 fputc(0x00, outptr);
             }
-            row--;
+            row-=abs(bi.biHeight);
             fseek(inptr, -(bi.biWidth * sizeof(RGBTRIPLE)), SEEK_CUR);
         }
         // skip over padding, if any
@@ -138,6 +136,7 @@ int main(int argc, char *argv[])
 
         // bring back cursor for new line
         fseek(inptr, (bi.biWidth * sizeof(RGBTRIPLE)), SEEK_CUR);
+        printf("\n");
     }
 
     // close infile
